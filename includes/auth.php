@@ -2,9 +2,9 @@
 if (session_status() === PHP_SESSION_NONE) session_start();
 
 function isLoggedIn(){ return isset($_SESSION['user_id']) && (int)$_SESSION['user_id'] > 0; }
-function requireLogin(){ if(!isLoggedIn()){ header('Location: /smart-lost-found/login.php'); exit; } }
+function requireLogin(){ if(!isLoggedIn()){ header('Location: /login.php'); exit; } }
 function isAdmin(){ return isLoggedIn() && strtoupper(trim($_SESSION['role'] ?? 'USER')) === 'ADMIN'; }
-function requireAdmin(){ if(!isLoggedIn()){ header('Location: /smart-lost-found/login.php'); exit; } if(!isAdmin()){ header('Location: /smart-lost-found/dashboard.php'); exit; } }
+function requireAdmin(){ if(!isLoggedIn()){ header('Location: /login.php'); exit; } if(!isAdmin()){ header('Location: /dashboard.php'); exit; } }
 function e($v){ return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8'); }
 function userInitial($name){ return strtoupper(mb_substr(trim($name ?: 'U'),0,1)); }
 function profileComplete($conn,$userId){
@@ -17,7 +17,7 @@ function requireProfile($conn){
     if(isAdmin()) return;
     if(!profileComplete($conn,(int)$_SESSION['user_id'])){
         $current=basename($_SERVER['PHP_SELF']);
-        if($current!=='profile.php'){ header('Location: /smart-lost-found/profile.php?required=1'); exit; }
+        if($current!=='profile.php'){ header('Location: /profile.php?required=1'); exit; }
     }
 }
 function statusLabel($status){
