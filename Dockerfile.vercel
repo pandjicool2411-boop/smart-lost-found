@@ -1,0 +1,22 @@
+FROM dunglas/frankenphp:1-php8.2-bookworm
+
+WORKDIR /app
+
+# PHP production settings
+RUN cp $PHP_INI_DIR/php.ini-production $PHP_INI_DIR/php.ini
+
+# MySQLi untuk koneksi ke TiDB
+RUN install-php-extensions mysqli
+
+# Copy seluruh project
+COPY . /app
+
+# Web root project kita ada di root /app
+ENV SERVER_ROOT=/app
+
+# Vercel akan memberikan PORT
+ENV SERVER_NAME=:80
+
+EXPOSE 80
+
+CMD ["frankenphp", "run", "--config", "/etc/frankenphp/Caddyfile"]
