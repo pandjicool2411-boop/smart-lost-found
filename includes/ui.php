@@ -1,6 +1,6 @@
 <?php
 function renderHead($title){ ?>
-<!doctype html><html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title><?= e($title) ?> — Smart Lost & Found Kampus</title><link rel="stylesheet" href="/smart-lost-found/assets/app.css"></head><body>
+<!doctype html><html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title><?= e($title) ?> — Smart Lost & Found Kampus</title><link rel="stylesheet" href="/assets/app.css"></head><body>
 <?php }
 function mobileShortcuts($active='dashboard',$admin=false){
     if($admin){
@@ -56,5 +56,5 @@ function renderAdminNav($active=''){
 <main class="main"><header class="topbar"><strong><?= e($titleForTop ?? 'Dashboard Admin') ?></strong><div class="user-chip"><span class="avatar"><?= e($initial) ?></span><span><?= e($name) ?></span></div></header>
 <?php mobileShortcuts($active,true); ?>
 <?php }
-function renderFooter(){ ?></main><script src="/smart-lost-found/assets/app.js"></script></body></html><?php }
+function renderFooter(){ ?></main><script src="/assets/app.js"></script></body></html><?php }
 ?>

@@ -1,7 +1,6 @@
-:80 {
+:{$PORT} {
     root * /app
     php_server
     encode gzip
-
     file_server
 }
