@@ -40,36 +40,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($u && password_verify($password, $u['password'])) {
 
-        session_regenerate_id(true);
+    // Sementara dimatikan untuk test session Vercel
+    // session_regenerate_id(true);
 
-        $_SESSION['user_id'] = $u['id'];
-        $_SESSION['name'] = $u['name'];
-        $_SESSION['email'] = $u['email'];
-        $_SESSION['role'] = $u['role'];
+    $_SESSION['user_id'] = (int) $u['id'];
+    $_SESSION['name'] = $u['name'];
+    $_SESSION['email'] = $u['email'];
+    $_SESSION['role'] = $u['role'];
 
-        /*
-         * REDIRECT SETELAH LOGIN
-         *
-         * Semua path dibuat root-relative untuk Vercel.
-         * Jangan gunakan /smart-lost-found/ di production.
-         */
-
-        if ($u['role'] === 'ADMIN') {
-
-            header('Location: /admin/dashboard.php');
-
-        } elseif (empty($u['profile_completed'])) {
-
-            header('Location: /profile.php?required=1');
-
-        } else {
-
-            header('Location: /dashboard.php');
-        }
-
-        exit;
-
+    if ($u['role'] === 'ADMIN') {
+        header('Location: /admin/dashboard.php');
+    } elseif (empty($u['profile_completed'])) {
+        header('Location: /profile.php?required=1');
     } else {
+        header('Location: /dashboard.php');
+    }
+
+    exit;
+} else {
 
         $message = 'Email atau password salah.';
         $type = 'error';
