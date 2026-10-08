@@ -1,6 +1,204 @@
-<?php require_once 'config/database.php'; require_once 'includes/auth.php';
-if(isLoggedIn()){header('Location: '.(isAdmin()?'/admin/dashboard.php':'/dashboard.php'));exit;}
-$message='';$type='';
-if(isset($_GET['registered'])){$message='Registrasi berhasil. Silakan login.';$type='ok';}
-if($_SERVER['REQUEST_METHOD']==='POST'){$email=trim($_POST['email']??'');$password=$_POST['password']??'';$st=$conn->prepare('SELECT id,name,email,password,role,profile_completed FROM users WHERE email=? LIMIT 1');$st->bind_param('s',$email);$st->execute();$u=$st->get_result()->fetch_assoc();$st->close();if($u&&password_verify($password,$u['password'])){session_regenerate_id(true);$_SESSION['user_id']=$u['id'];$_SESSION['name']=$u['name'];$_SESSION['email']=$u['email'];$_SESSION['role']=$u['role'];if($u['role']==='ADMIN')header('Location: /admin/dashboard.php');elseif(empty($u['profile_completed']))header('Location: /smart-lost-found/profile.php?required=1');else header('Location: /smart-lost-found/dashboard.php');exit;}else{$message='Email atau password salah.';$type='error';}}
-?><!doctype html><html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Login — Smart Lost & Found</title><link rel="stylesheet" href="/assets/app.css"></head><body><div class="content" style="min-height:100vh;display:flex;align-items:center;justify-content:center"><div class="card animate-in" style="max-width:460px;width:100%"><div style="font-size:34px">◆</div><h1>Smart Lost & Found</h1><p class="muted">Masuk ke sistem Lost & Found Kampus.</p><?php if($message): ?><div class="notice notice-<?= $type==='error'?'error':'ok' ?>"><?= e($message) ?></div><?php endif; ?><form method="post"><div class="form-group"><label>Email</label><input class="form-control" type="email" name="email" required></div><div class="form-group"><label>Password</label><input class="form-control" type="password" name="password" required></div><button class="btn btn-primary btn-full" type="submit">Login</button></form><p class="muted" style="text-align:center">Belum punya akun? <a href="register.php">Daftar</a></p></div></div><script src="/assets/app.js"></script></body></html>
+<?php
+
+require_once 'config/database.php';
+require_once 'includes/auth.php';
+
+if (isLoggedIn()) {
+    header(
+        'Location: ' .
+        (isAdmin() ? '/admin/dashboard.php' : '/dashboard.php')
+    );
+    exit;
+}
+
+$message = '';
+$type = '';
+
+if (isset($_GET['registered'])) {
+    $message = 'Registrasi berhasil. Silakan login.';
+    $type = 'ok';
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+
+    $email = trim($_POST['email'] ?? '');
+    $password = $_POST['password'] ?? '';
+
+    $st = $conn->prepare(
+        'SELECT id, name, email, password, role, profile_completed
+         FROM users
+         WHERE email = ?
+         LIMIT 1'
+    );
+
+    $st->bind_param('s', $email);
+    $st->execute();
+
+    $u = $st->get_result()->fetch_assoc();
+
+    $st->close();
+
+    if ($u && password_verify($password, $u['password'])) {
+
+        session_regenerate_id(true);
+
+        $_SESSION['user_id'] = $u['id'];
+        $_SESSION['name'] = $u['name'];
+        $_SESSION['email'] = $u['email'];
+        $_SESSION['role'] = $u['role'];
+
+        /*
+         * REDIRECT SETELAH LOGIN
+         *
+         * Semua path dibuat root-relative untuk Vercel.
+         * Jangan gunakan /smart-lost-found/ di production.
+         */
+
+        if ($u['role'] === 'ADMIN') {
+
+            header('Location: /admin/dashboard.php');
+
+        } elseif (empty($u['profile_completed'])) {
+
+            header('Location: /profile.php?required=1');
+
+        } else {
+
+            header('Location: /dashboard.php');
+        }
+
+        exit;
+
+    } else {
+
+        $message = 'Email atau password salah.';
+        $type = 'error';
+    }
+}
+
+?>
+
+<!doctype html>
+<html lang="id">
+
+<head>
+
+    <meta charset="utf-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width,initial-scale=1"
+    >
+
+    <title>Login — Smart Lost & Found</title>
+
+    <link
+        rel="stylesheet"
+        href="/assets/app.css"
+    >
+
+</head>
+
+<body>
+
+<div
+    class="content"
+    style="
+        min-height:100vh;
+        display:flex;
+        align-items:center;
+        justify-content:center
+    "
+>
+
+    <div
+        class="card animate-in"
+        style="
+            max-width:460px;
+            width:100%
+        "
+    >
+
+        <div style="font-size:34px">
+            ◆
+        </div>
+
+        <h1>
+            Smart Lost & Found
+        </h1>
+
+        <p class="muted">
+            Masuk ke sistem Lost & Found Kampus.
+        </p>
+
+        <?php if ($message): ?>
+
+            <div
+                class="notice notice-<?= $type === 'error' ? 'error' : 'ok' ?>"
+            >
+                <?= e($message) ?>
+            </div>
+
+        <?php endif; ?>
+
+        <form method="post">
+
+            <div class="form-group">
+
+                <label>
+                    Email
+                </label>
+
+                <input
+                    class="form-control"
+                    type="email"
+                    name="email"
+                    required
+                >
+
+            </div>
+
+            <div class="form-group">
+
+                <label>
+                    Password
+                </label>
+
+                <input
+                    class="form-control"
+                    type="password"
+                    name="password"
+                    required
+                >
+
+            </div>
+
+            <button
+                class="btn btn-primary btn-full"
+                type="submit"
+            >
+                Login
+            </button>
+
+        </form>
+
+        <p
+            class="muted"
+            style="text-align:center"
+        >
+            Belum punya akun?
+
+            <a href="register.php">
+                Daftar
+            </a>
+        </p>
+
+    </div>
+
+</div>
+
+<script src="/assets/app.js"></script>
+
+</body>
+
+</html>
