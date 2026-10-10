@@ -33,6 +33,7 @@ function renderUserNav($active=''){
 <a class="<?= $active==='matching'?'active':'' ?>" href="/matching.php">✦ <span>Smart Matching</span></a>
 <a class="<?= $active==='klaim'?'active':'' ?>" href="/klaim-saya.php">◇ <span>Klaim Saya</span></a>
 <a class="<?= $active==='masuk'?'active':'' ?>" href="/klaim-masuk.php">✓ <span>Persetujuan Penemu</span></a>
+<a class="<?= $active==='support'?'active':'' ?>" href="/support.php">✉ <span>Support</span></a>
 <div class="menu-title">AKUN</div>
 <a class="<?= $active==='profile'?'active':'' ?>" href="/profile.php">◉ <span>Profil</span></a>
 <a href="/logout.php">↪ <span>Logout</span></a>
@@ -47,6 +48,7 @@ function renderAdminNav($active=''){
 <a class="<?= $active==='dashboard'?'active':'' ?>" href="/admin/dashboard.php">⌂ <span>Dashboard</span></a>
 <a class="<?= $active==='reports'?'active':'' ?>" href="/admin/reports.php">▣ <span>Verifikasi Laporan</span></a>
 <a class="<?= $active==='claims'?'active':'' ?>" href="/admin/claims.php">◇ <span>Verifikasi Klaim</span></a>
+<a class="<?= $active==='support'?'active':'' ?>" href="/admin/support.php">✉ <span>Support Chat</span></a>
 <a href="/temukan.php">⌕ <span>Cari Barang</span></a>
 <div class="menu-title">AKUN</div>
 <a class="<?= $active==='profile'?'active':'' ?>" href="/profile.php">◉ <span>Profil</span></a>
