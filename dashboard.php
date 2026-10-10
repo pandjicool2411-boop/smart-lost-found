@@ -1,239 +1,57 @@
 <?php
+require_once 'config/database.php';
+require_once 'includes/auth.php';
+require_once 'includes/ui.php';
+requireProfile($conn);
+$uid=(int)$_SESSION['user_id'];
+$stats=[];
+$st=$conn->prepare("SELECT COUNT(*) n FROM reports WHERE user_id=? AND type='LOST'");$st->bind_param('i',$uid);$st->execute();$stats['lost']=$st->get_result()->fetch_assoc()['n'];$st->close();
+$st=$conn->prepare("SELECT COUNT(*) n FROM reports WHERE user_id=? AND type='FOUND'");$st->bind_param('i',$uid);$st->execute();$stats['found']=$st->get_result()->fetch_assoc()['n'];$st->close();
+$st=$conn->prepare("SELECT COUNT(*) n FROM matches m JOIN reports r ON r.id=m.lost_report_id WHERE r.user_id=?");$st->bind_param('i',$uid);$st->execute();$stats['match']=$st->get_result()->fetch_assoc()['n'];$st->close();
+$st=$conn->prepare("SELECT COUNT(*) n FROM claims WHERE user_id=?");$st->bind_param('i',$uid);$st->execute();$stats['claim']=$st->get_result()->fetch_assoc()['n'];$st->close();
 
-/*
-|--------------------------------------------------------------------------
-| PHP SESSION
-|--------------------------------------------------------------------------
-*/
+$all=$conn->query("SELECT r.id,r.type,r.item_name,r.image,r.incident_date,r.status,c.name category_name,l.name location_name,u.name reporter_name
+FROM reports r LEFT JOIN categories c ON c.id=r.category_id LEFT JOIN locations l ON l.id=r.location_id JOIN users u ON u.id=r.user_id
+WHERE r.status IN ('VERIFIED','PENDING') ORDER BY r.created_at DESC LIMIT 12");
+$recommend=$conn->prepare("SELECT m.score,m.matching_reason,f.id,f.item_name,f.image,f.incident_date,c.name category_name,l.name location_name
+FROM matches m JOIN reports lost ON lost.id=m.lost_report_id JOIN reports f ON f.id=m.found_report_id
+LEFT JOIN categories c ON c.id=f.category_id LEFT JOIN locations l ON l.id=f.location_id
+WHERE lost.user_id=? AND f.status='VERIFIED' ORDER BY m.score DESC LIMIT 3");
+$recommend->bind_param('i',$uid);$recommend->execute();$matches=$recommend->get_result();
 
-if (session_status() === PHP_SESSION_NONE) {
+$name=$_SESSION['name']??'Pengguna';$titleForTop='Dashboard';renderHead('Dashboard');renderUserNav('dashboard');
+?>
+<div class="content animate-in">
+<section class="section-head"><div><h1 class="hero-title">Halo, <?= e($name) ?> 👋</h1><p class="muted">Temukan kembali barangmu melalui Smart Lost & Found Kampus.</p></div><a class="btn btn-blue" href="buat-laporan.php">＋ Buat Laporan</a></section>
 
-    $isHttps =
-        (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
-        || (
-            isset($_SERVER['HTTP_X_FORWARDED_PROTO'])
-            && strtolower($_SERVER['HTTP_X_FORWARDED_PROTO']) === 'https'
-        );
+<div class="dashboard-grid stagger">
+<div class="card stat-card red"><small>Barang Hilang</small><div class="big animate-number"><?= $stats['lost'] ?></div><span class="meta">Laporan kehilangan kamu</span></div>
+<div class="card stat-card green"><small>Barang Ditemukan</small><div class="big animate-number"><?= $stats['found'] ?></div><span class="meta">Laporan penemuan kamu</span></div>
+<div class="card stat-card blue"><small>Kecocokan Barang</small><div class="big animate-number"><?= $stats['match'] ?></div><span class="meta">Hasil Smart Matching</span></div>
+<div class="card stat-card yellow"><small>Total Klaim</small><div class="big animate-number"><?= $stats['claim'] ?></div><span class="meta">Klaim yang pernah dibuat</span></div>
+</div>
 
-    session_set_cookie_params([
-        'lifetime' => 0,
-        'path' => '/',
-        'domain' => '',
-        'secure' => $isHttps,
-        'httponly' => true,
-        'samesite' => 'Lax'
-    ]);
+<section class="section">
+<div class="section-head"><div><h2>Semua Laporan Barang</h2><p class="muted">Barang hilang dan barang ditemukan yang sudah masuk ke sistem.</p></div><a class="top-link" href="temukan.php">Lihat semua →</a></div>
+<div class="grid grid-3 stagger">
+<?php if($all->num_rows): while($r=$all->fetch_assoc()): ?>
+<a class="card item-card" href="detail-barang.php?id=<?= (int)$r['id'] ?>">
+<div class="thumb"><?php if($r['image']): ?><img src="uploads/<?= e($r['image']) ?>" alt="<?= e($r['item_name']) ?>"><?php else: ?>📦<?php endif; ?></div>
+<div class="body">
+<span class="pill <?= $r['type']==='FOUND'?'pill-green':'pill-red' ?>"><?= $r['type']==='FOUND'?'Ditemukan':'Hilang' ?></span>
+<h3><?= e($r['item_name']) ?></h3>
+<div class="meta">📍 <?= e($r['location_name']??'-') ?><br>📅 <?= e($r['incident_date']) ?><br>👤 <?= e($r['reporter_name']) ?></div>
+<div class="mini-actions"><span class="pill <?= $r['status']==='VERIFIED'?'pill-green':'pill-yellow' ?>"><?= e(statusLabel($r['status'])) ?></span><span class="top-link">Detail →</span></div>
+</div></a>
+<?php endwhile; else: ?><div class="empty" style="grid-column:1/-1">Belum ada laporan barang.</div><?php endif; ?>
+</div></section>
 
-    session_start();
-}
-
-
-/*
-|--------------------------------------------------------------------------
-| LOGIN CHECK
-|--------------------------------------------------------------------------
-*/
-
-function isLoggedIn()
-{
-    return isset($_SESSION['user_id'])
-        && (int) $_SESSION['user_id'] > 0;
-}
-
-
-/*
-|--------------------------------------------------------------------------
-| REQUIRE LOGIN
-|--------------------------------------------------------------------------
-*/
-
-function requireLogin()
-{
-    if (!isLoggedIn()) {
-        header('Location: /login.php');
-        exit;
-    }
-}
-
-
-/*
-|--------------------------------------------------------------------------
-| ADMIN CHECK
-|--------------------------------------------------------------------------
-*/
-
-function isAdmin()
-{
-    return isLoggedIn()
-        && strtoupper(
-            trim($_SESSION['role'] ?? 'USER')
-        ) === 'ADMIN';
-}
-
-
-/*
-|--------------------------------------------------------------------------
-| REQUIRE ADMIN
-|--------------------------------------------------------------------------
-*/
-
-function requireAdmin()
-{
-    requireLogin();
-
-    if (!isAdmin()) {
-        header('Location: /dashboard.php');
-        exit;
-    }
-}
-
-
-/*
-|--------------------------------------------------------------------------
-| HTML ESCAPE
-|--------------------------------------------------------------------------
-*/
-
-function e($v)
-{
-    return htmlspecialchars(
-        (string) $v,
-        ENT_QUOTES,
-        'UTF-8'
-    );
-}
-
-
-/*
-|--------------------------------------------------------------------------
-| USER INITIAL
-|--------------------------------------------------------------------------
-*/
-
-function userInitial($name)
-{
-    $name = trim($name ?: 'U');
-
-    return strtoupper(
-        mb_substr($name, 0, 1)
-    );
-}
-
-
-/*
-|--------------------------------------------------------------------------
-| CHECK PROFILE
-|--------------------------------------------------------------------------
-*/
-
-function profileComplete($conn, $userId)
-{
-    $st = $conn->prepare(
-        'SELECT profile_completed
-         FROM users
-         WHERE id = ?
-         LIMIT 1'
-    );
-
-    if (!$st) {
-        return false;
-    }
-
-    $st->bind_param(
-        'i',
-        $userId
-    );
-
-    $st->execute();
-
-    $result = $st->get_result();
-
-    $row = $result->fetch_assoc();
-
-    $st->close();
-
-    return !empty($row['profile_completed']);
-}
-
-
-/*
-|--------------------------------------------------------------------------
-| REQUIRE PROFILE
-|--------------------------------------------------------------------------
-*/
-
-function requireProfile($conn)
-{
-    requireLogin();
-
-    if (isAdmin()) {
-        return;
-    }
-
-    $userId = (int) ($_SESSION['user_id'] ?? 0);
-
-    if ($userId <= 0) {
-        header('Location: /login.php');
-        exit;
-    }
-
-    if (!profileComplete($conn, $userId)) {
-
-        $currentPage = basename(
-            $_SERVER['PHP_SELF'] ?? ''
-        );
-
-        if ($currentPage !== 'profile.php') {
-            header(
-                'Location: /profile.php?required=1'
-            );
-            exit;
-        }
-    }
-}
-
-
-/*
-|--------------------------------------------------------------------------
-| STATUS LABEL
-|--------------------------------------------------------------------------
-*/
-
-function statusLabel($status)
-{
-    return match ($status) {
-
-        'PENDING'
-            => 'Menunggu Verifikasi',
-
-        'VERIFIED'
-            => 'Terverifikasi',
-
-        'CLAIMED'
-            => 'Sedang Diklaim',
-
-        'RETURNED'
-            => 'Selesai / Dikembalikan',
-
-        'REJECTED'
-            => 'Ditolak',
-
-        'APPROVED'
-            => 'Disetujui',
-
-        'FINDER_APPROVED'
-            => 'Disetujui Penemu',
-
-        'FINDER_REJECTED'
-            => 'Ditolak Penemu',
-
-        'ADMIN_REJECTED'
-            => 'Ditolak Admin',
-
-        'COMPLETED'
-            => 'Selesai',
-
-        default
-            => $status
-    };
-}
+<section class="section">
+<div class="section-head"><div><h2 class="recommend-title">Rekomendasi Matching</h2><p class="muted">Kecocokan terbaik dari laporan kehilanganmu.</p></div><a class="top-link" href="matching.php">View All →</a></div>
+<div class="grid grid-3 stagger">
+<?php if($matches->num_rows): while($m=$matches->fetch_assoc()): ?>
+<a class="card item-card" href="detail-barang.php?id=<?= (int)$m['id'] ?>"><div class="thumb"><?php if($m['image']): ?><img src="uploads/<?= e($m['image']) ?>" alt=""><?php else: ?>📦<?php endif; ?></div><div class="body"><div class="section-head" style="margin-bottom:5px"><h3><?= e($m['item_name']) ?></h3><span class="pill pill-green"><?= (int)$m['score'] ?>%</span></div><div class="meta">📍 <?= e($m['location_name']??'-') ?><br>📅 <?= e($m['incident_date']) ?></div><div class="progress" style="margin-top:12px"><span style="width:<?= min(100,(int)$m['score']) ?>%"></span></div></div></a>
+<?php endwhile; else: ?><div class="empty" style="grid-column:1/-1">Belum ada rekomendasi. Buat laporan kehilangan lalu jalankan Smart Matching.</div><?php endif; ?>
+</div></section>
+</div>
+<?php renderFooter(); ?>
